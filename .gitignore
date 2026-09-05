@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables — never commit real API keys
+.env
+.env.local
+.env.*.local
+client/.env
+client/.env.local
+server/.env
+
+# Build output
+dist/
+client/dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
