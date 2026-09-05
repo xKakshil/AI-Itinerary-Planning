@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { buildSystemPrompt } from "../prompts/tripPrompt.js";
+import { retryWithBackoff } from "./retryWithBackoff.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -44,24 +45,10 @@ const RESPONSE_SCHEMA = {
   required: ["trip_title", "days"],
 };
 
-function isTransientServerError(error) {
-  const status = error.status;
-  const messageText = String(error.message || "").toLowerCase();
-  return (
-    status === 503 ||
-    status === 502 ||
-    messageText.includes("unavailable") ||
-    messageText.includes("overloaded") ||
-    messageText.includes("high demand")
-  );
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-
-async function callGeminiWithOwnTimeout(systemPrompt, userPrompt) {
+// Fresh AbortController/timeout per call — each retry attempt (see
+// retryWithBackoff) gets its own full 20s window, not a shared
+// countdown that might already be nearly expired.
+async function callGemini(systemPrompt, userPrompt) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
 
@@ -84,15 +71,5 @@ async function callGeminiWithOwnTimeout(systemPrompt, userPrompt) {
 
 export async function generateRawTrip(userPrompt, preferences = {}) {
   const systemPrompt = buildSystemPrompt(preferences);
-
-  try {
-    return await callGeminiWithOwnTimeout(systemPrompt, userPrompt);
-  } catch (error) {
-
-    if (isTransientServerError(error)) {
-      await delay(2000);
-      return await callGeminiWithOwnTimeout(systemPrompt, userPrompt);
-    }
-    throw error;
-  }
+  return retryWithBackoff(() => callGemini(systemPrompt, userPrompt));
 }

@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { buildReplacePrompt } from "../prompts/replaceStopPrompt.js";
+import { retryWithBackoff } from "./retryWithBackoff.js";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -17,13 +18,11 @@ const STOP_RESPONSE_SCHEMA = {
   required: ["name", "description", "category", "duration_minutes", "start_time_hint"],
 };
 
-export async function generateRawReplacementStop(context) {
+async function callGemini(prompt) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
 
   try {
-    const prompt = buildReplacePrompt(context);
-
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
@@ -34,9 +33,13 @@ export async function generateRawReplacementStop(context) {
       signal: controller.signal,
     });
 
-
     return response.text;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function generateRawReplacementStop(context) {
+  const prompt = buildReplacePrompt(context);
+  return retryWithBackoff(() => callGemini(prompt));
 }

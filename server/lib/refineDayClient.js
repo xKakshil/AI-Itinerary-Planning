@@ -1,10 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { buildRefineDayPrompt } from "../prompts/refineDayPrompt.js";
- 
+import { retryWithBackoff } from "./retryWithBackoff.js";
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
- 
+
 const DAY_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
@@ -27,14 +28,12 @@ const DAY_RESPONSE_SCHEMA = {
   },
   required: ["day_number", "theme", "stops"],
 };
- 
-export async function generateRawDayRefinement(context) {
+
+async function callGemini(prompt) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
- 
+
   try {
-    const prompt = buildRefineDayPrompt(context);
- 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
@@ -44,10 +43,14 @@ export async function generateRawDayRefinement(context) {
       },
       signal: controller.signal,
     });
- 
 
     return response.text;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function generateRawDayRefinement(context) {
+  const prompt = buildRefineDayPrompt(context);
+  return retryWithBackoff(() => callGemini(prompt));
 }
