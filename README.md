@@ -4,7 +4,7 @@ Type a trip description in plain English, get back a structured day-by-day itine
 
 **Live app:** https://ai-itinerary-planning.vercel.app
 **Backend:** https://ai-itinerary-planning-server.onrender.com
-**Demo:** https://drive.google.com/file/d/1-afA0CECgB9yyTn15YM0JwqYe8XyxQUy/view?usp=drive_link
+**Demo video:** https://drive.google.com/file/d/1-afA0CECgB9yyTn15YM0JwqYe8XyxQUy/view?usp=drive_link
 
 (Backend is on Render's free tier, kept warm with an UptimeRobot ping every 5 min so it doesn't cold-start on first load.)
 
